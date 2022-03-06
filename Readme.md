@@ -40,6 +40,9 @@ Then add a new `sms` component to your `main-local.php` (advanced) or `web.php` 
         // Tell Twilio where to POST information about your message.
         // @see https://www.twilio.com/docs/sms/send-messages#monitor-the-status-of-your-message
         //'statusCallback' => 'https://example.com/path/to/callback',      // optional
+
+        //if this callable, call on exception, else write errors to @runtime/logs
+        'exceptionCallback'=>function($category, $message) {},  //optional
     ],
 
 > Note: This package does not provide a route for the `statusCallback`. You will need to create your own route to handle this. It isn't necessary to send SMS messages with Twilio, and is used for deeper tracking of each message's status.

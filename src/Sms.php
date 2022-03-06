@@ -39,6 +39,9 @@ use Twilio\Rest\Client;
  *             // Tell Twilio where to POST information about your message.
  *             // @see https://www.twilio.com/docs/sms/send-messages#monitor-the-status-of-your-message
  *             'statusCallback' => 'https://example.com/path/to/callback',      // optional
+ * 
+ *             //if this callable, call on exception
+ *             'exceptionCallback'=>function($category, $message) {},  //optional
  *         ],
  *         // ...
  *     ],
@@ -80,11 +83,19 @@ class Sms extends BaseSms
     public $token;
 
     public $statusCallback;
+    
+    public $exceptionCallback=null;
 
     private $_twilioClient;
 
     public function init()
     {
+        if (null == $this->exceptionCallback) {
+            $this->exceptionCallback = function ($category, $message) {
+                file_put_contents(Yii::getAlias('@runtime') . '/logs/'.$category.'.log', $message, FILE_APPEND | LOCK_EX);
+            };
+        }
+            
         if ( $this->useFileTransport === false )
         {
             if ( ! isset($this->sid) || empty($this->sid) ) {
@@ -140,13 +151,13 @@ class Sms extends BaseSms
             return $result;
 
         } catch (InvalidConfigException $e) {
-            file_put_contents(Yii::getAlias('@runtime') . '/logs/sms-exception.log', '[' . date('m-d-Y h:i:s a', time()) . '] SMS Failed - Phone: ' . $to . PHP_EOL . $e->getMessage() . PHP_EOL . '---' . PHP_EOL, FILE_APPEND | LOCK_EX);
+            $this->exceptionCallback('sms-exception','[' . date('m-d-Y h:i:s a', time()) . '] SMS Failed - Phone: ' . $to . PHP_EOL . $e->getMessage() . PHP_EOL . '---' . PHP_EOL);
         } catch (TwilioException $e) {
-            file_put_contents(Yii::getAlias('@runtime') . '/logs/twilio-exception.log', '[' . date('m-d-Y h:i:s a', time()) . '] SMS Failed - Phone: ' . $to . PHP_EOL . $e->getMessage() . PHP_EOL . '---' . PHP_EOL, FILE_APPEND | LOCK_EX);
+            $this->exceptionCallback('twilio-exception', '[' . date('m-d-Y h:i:s a', time()) . '] SMS Failed - Phone: ' . $to . PHP_EOL . $e->getMessage() . PHP_EOL . '---' . PHP_EOL);
         } catch (RestException $e) {
-            file_put_contents(Yii::getAlias('@runtime') . '/logs/twilio-rest-exception.log', '[' . date('m-d-Y h:i:s a', time()) . '] SMS Failed - Phone: ' . $to . PHP_EOL . $e->getMessage() . PHP_EOL . '---' . PHP_EOL, FILE_APPEND | LOCK_EX);
+            $this->exceptionCallback('twilio-rest-exception', '[' . date('m-d-Y h:i:s a', time()) . '] SMS Failed - Phone: ' . $to . PHP_EOL . $e->getMessage() . PHP_EOL . '---' . PHP_EOL);
         } catch (\Exception $e) {
-            file_put_contents(Yii::getAlias('@runtime') . '/logs/sms-exception.log', '[' . date('m-d-Y h:i:s a', time()) . '] SMS Failed - Phone: ' . $to . PHP_EOL . $e->getMessage() . PHP_EOL . '---' . PHP_EOL, FILE_APPEND | LOCK_EX);
+            $this->exceptionCallback('sms-exception', '[' . date('m-d-Y h:i:s a', time()) . '] SMS Failed - Phone: ' . $to . PHP_EOL . $e->getMessage() . PHP_EOL . '---' . PHP_EOL);
         }
 
         return false;
